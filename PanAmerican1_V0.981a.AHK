@@ -1,4 +1,4 @@
-﻿#NoEnv
+#NoEnv
 #MaxHotkeysPerInterval 99000000
 #HotkeyInterval 99000000
 #KeyHistory 0
@@ -27,10 +27,10 @@ nitros := "Down"
 ; RUF pink 0x583375
 ; --------- Constants 
 ; Time at turn in seconds and Stablizing control
-t := 220000
-intensity := 210
-delay := 160
-init_delay := 10000
+t := 230000
+intensity := 150
+delay := 100
+first_turn_delay := 8500
 
 MenuDirect := "Right"
 Menu_loops := 6
@@ -38,6 +38,7 @@ menu_s := 1
 box_size := 3
 color_check1 :=  0xBBE044
 color_check2 :=  0xBBE044
+color_check3 :=  0xB3B5B5
 color_2_delay := 250
 
 color_tyre_overheat := 0xD42304
@@ -52,6 +53,8 @@ pix1x := 458
 pix1y := 114
 pix2x := 607
 pix2y := 319
+pix3x := 497
+pix3y := 370
 tolerance := 20
 bm_delay := 100
 box_size := 2
@@ -59,7 +62,7 @@ box_size := 2
 ; 1st load time is the load screen after clicking green 'To Next Race' button
 ps_load_time1 := 12000
 ; 2nd load time is the load screen after clicking red 'Exit Race' button
-ps_load_time2 := 6000 
+ps_load_time2 := 7000 
 ; 3rd load time is the load screen after selecting 'Pan America' race series
 ps_load_time3 := 8400
 
@@ -72,15 +75,16 @@ Gui, Add, Button, x15 y10 w70 default, Start
 Gui, Add, Button, x15 y40 w70 default gVariableWindow, Variables
 Gui, Add, Button, x15 y70 w70 default gGetColo_p, Stuck Leaderboard
 Gui, Add, Button, x110 y70 w70 default gGetColo_g, Stuck Replay
+Gui, Add, Button, x110 y100 w70 default gGetColo_m, MenuColor
 Gui, Add, Button, x110 y10 w70 default gMenuTest, MenuTest
 Gui, Add, DropDownList, w50 Choose1 vMenuDirect, Right|Left
 Gui, Add, Edit, vMenu_loops w20 x165 y39, 6
 Gui, Font, ce8dfe3 s9 w550 Bold
-Gui, Add, Radio, Group x15 y115 altsubmit Checked gPSystem vSysCheck, PS5
-Gui, Add, Radio, x70 y115 altsubmit  gPSystem, PS4
-;Gui, Add, Radio, Group x15 y130 altsubmit Checked gMenuSel vMenuCheck, Pixel
-;Gui, Add, Radio, x70 y120 altsubmit  gMenuSel, Timing
-Gui, Add, Button, x70 y135 w70 default gReset, Reset
+Gui, Add, Radio, Group x15 y145 altsubmit Checked gPSystem vSysCheck, PS5
+Gui, Add, Radio, x70 y145 altsubmit  gPSystem, PS4
+;Gui, Add, Radio, Group x15 y160 altsubmit Checked gMenuSel vMenuCheck, Pixel
+;Gui, Add, Radio, x70 y150 altsubmit  gMenuSel, Timing
+Gui, Add, Button, x70 y165 w70 default gReset, Reset
 Gui, Font, ce8dfe3 s9 w550 Bold
 
 ;--------- Gui 2 Setup --------------
@@ -94,14 +98,16 @@ Gui, 2: Add, Text,, Turn Delay
 Gui, 2: Add, Edit,  w40 vC, %delay%
 Gui, 2: Add, Text, x100 y90, Color 2 Delay
 Gui, 2: Add, Edit, x100 y110 w40 vD, %color_2_delay%
+Gui, 2: Add, Text, x15 y150, First Turn Delay
+Gui, 2: Add, Edit, x15 w50 vE, %first_turn_delay%
 
-Gui, 2: Add, Button, x20  y170 gSaveVars, Save 
-Gui, 2: Add, Button, x100 y170 gVarDef, Defaults
-Gui, Show,w220 h170,  GT7 Pan American AFK
+Gui, 2: Add, Button, x20  y220 gSaveVars, Save 
+Gui, 2: Add, Button, x100 y220 gVarDef, Defaults
+Gui, Show,w220 h200,  GT7 Pan American AFK
 return
 
 VariableWindow:
-    Gui, 2: Show, w220 h205, Variables
+    Gui, 2: Show, w220 h265, Variables
     return
 
 SaveVars:
@@ -110,16 +116,19 @@ SaveVars:
     GuiControlGet, intensity, 2:, B
     GuiControlGet, delay, 2:, C
     GuiControlGet, color_2_delay, 2:, D
+    GuiControlGet, first_turn_delay, 2:, E
     return
 
 VarDef:
-    t = 220000
-	intensity = 220
-	delay := 140
+    t = 230000
+	intensity = 150
+	delay := 100
+    first_turn_delay := 8500
     GuiControl, 2:, A, %t%
     GuiControl, 2:, B, %intensity%
     GuiControl, 2:, C, %delay%
     GuiControl, 2:, D, %color_2_delay%
+    guiControl, 2:, E, %first_turn_delay%
     return
 
 ButtonStart:
@@ -227,7 +236,7 @@ Race:
 	ToolTip, Racing, 100, 100, Screen
 	ControlSend,, {%accel% down}, ahk_id %id% 
 	ControlSend,, {%nitros% down}, ahk_id %id% 
-	DllCall("Sleep", "UInt", 8000)
+	DllCall("Sleep", "UInt", first_turn_delay)
 	ToolTip ; This is to remove tooltip 
 	gosub TurnRight
     loop {
@@ -309,12 +318,7 @@ Menu_pixel:
     Sleep, 100
     ControlSend,, {Down up}, ahk_id %id% 
 	Sleep, 100
-	loop, %menu_loops% {
-		ControlSend,, {%MenuDirect% down}, ahk_id %id% 
-		Sleep, 100
-		ControlSend,, {%MenuDirect% up}, ahk_id %id% 
-		Sleep, 100
-	}
+	gosub, MoveThroughChampionshipMenu
 	loop, 2{
         gosub, PressX
         Sleep, 500
@@ -326,6 +330,28 @@ Menu_pixel:
         Sleep, 500
     }
     return
+
+MoveThroughChampionshipMenu:
+loop {
+    break_point := false
+    c3 := BitGrab(pix3x, pix3y, box_size)
+
+    for i, c in c3
+    {
+        d2 := Distance(c, color_check3)
+        if (d2 < tolerance ){
+            break_point := true
+            break
+        }
+    }
+    if (break_point)
+        break
+    ControlSend,, {%MenuDirect% down}, ahk_id %id% 
+    Sleep, 100
+    ControlSend,, {%MenuDirect% up}, ahk_id %id% 
+    Sleep, 300
+}
+return
 
 Menu_time:
     loop, 9{
@@ -376,6 +402,8 @@ pix1x := Floor(pix1x*x_ratio)
 pix1y := Floor(pix1y*y_ratio)
 pix2x := Floor(pix2x*x_ratio)
 pix2y := Floor(pix2y*y_ratio)
+pix3x := Floor(pix3x*x_ratio)
+pix3y := Floor(pix3y*y_ratio)
 tyreX := Floor(tyreX*x_ratio)
 tyreY := Floor(tyreY*y_ratio)
 return
@@ -474,12 +502,7 @@ MenuTest:
 MsgBox, This will test the number of Left/Right presses at the championship selection menu. `nTry this if you have not finished all cafe menus. `nPress OK to test
 gosub, GrabRemotePlay
 Gui, Submit, NoHide
-loop, %menu_loops% {
-		ControlSend,, {%MenuDirect% down}, ahk_id %id% 
-		Sleep, 200
-		ControlSend,, {%MenuDirect% up}, ahk_id %id% 
-		Sleep, 200
-	}
+gosub, MoveThroughChampionshipMenu
 return
 
 BitGrab(x, y, b)
@@ -521,6 +544,12 @@ return
 GetColo_g:
 gosub, GrabRemotePlay
 color_check2 := PixelColorSimple(pix2x, pix2y)
+return
+
+GetColo_m:
+gosub, GrabRemotePlay
+temp_color3 := PixelColorSimple(pix3x, pix3y)
+ToolTip, %temp_color3%, pix3x, pix3y, Window
 return
 
 PSystem:
